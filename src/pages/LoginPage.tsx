@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import backgroundImage from '../assets/background.jpeg';
+import logo from '../assets/logo.png';
 
 function formatUsername(digits: string): string {
   const groups = [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 9), digits.slice(9, 12)];
@@ -46,11 +48,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div
+      className="relative flex min-h-screen items-center justify-center bg-background px-4 bg-cover bg-center"
+      style={{ backgroundImage: `url(${backgroundImage})` }}
+    >
+      <div className="absolute inset-0 bg-background/80" />
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-2xl border border-border bg-surface p-8 shadow-xl"
+        className="relative w-full max-w-sm rounded-2xl border border-border bg-surface/95 p-8 shadow-2xl backdrop-blur-sm"
       >
+        <img src={logo} alt="MB Sport Racing Dog" className="mx-auto mb-4 h-16 w-auto" />
         <h1 className="mb-1 text-center text-2xl font-bold">
           <span className="text-accent">Admin</span> POS6
         </h1>

@@ -2,16 +2,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #0F172A;
-  --color-secondary: #1E293B;
-  --color-surface: #161B2C;
+  --color-primary: #0E1812;
+  --color-secondary: #1B2B20;
+  --color-surface: #14211A;
   --color-accent: #D4AF37;
   --color-positive: #22C55E;
   --color-destructive: #EF4444;
-  --color-background: #0B1120;
+  --color-background: #0A1210;
   --color-foreground: #F8FAFC;
   --color-muted: #94A3B8;
-  --color-border: #334155;
+  --color-border: #2C3E32;
 
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Fira Code", ui-monospace, Consolas, monospace;
