@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0F172A;
+  --color-secondary: #1E293B;
+  --color-surface: #161B2C;
+  --color-accent: #D4AF37;
+  --color-positive: #22C55E;
+  --color-destructive: #EF4444;
+  --color-background: #0B1120;
+  --color-foreground: #F8FAFC;
+  --color-muted: #94A3B8;
+  --color-border: #334155;
+
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, Consolas, monospace;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.tabular-nums {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
