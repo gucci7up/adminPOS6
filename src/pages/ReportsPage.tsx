@@ -13,7 +13,7 @@ interface AgencyTotals {
 
 const currencyFormatter = new Intl.NumberFormat('es-DO', {
   style: 'currency',
-  currency: 'USD',
+  currency: 'DOP',
   minimumFractionDigits: 2,
 });
 
