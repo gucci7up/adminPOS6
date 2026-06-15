@@ -34,6 +34,17 @@ export interface AuthResult {
 
 export type TicketStatus = 'PENDING' | 'WON' | 'LOST' | 'PAID' | 'CANCELLED';
 
+export type BetType = 'WINNER' | 'EXACTA' | 'TRIFECTA';
+
+export interface TicketDetail {
+  id: string;
+  betType: BetType;
+  selection: string;
+  amount: string;
+  odds: string;
+  potentialPrize: string;
+}
+
 export interface Ticket {
   id: string;
   ticketNumber: number;
@@ -41,6 +52,11 @@ export interface Ticket {
   prizeAmount: string;
   status: TicketStatus;
   createdAt: string;
+  details: TicketDetail[];
+  race: {
+    id: string;
+    numero: number;
+  };
   user: {
     id: string;
     username: string;

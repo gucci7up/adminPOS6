@@ -15,7 +15,7 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar (desktop) */}
-      <aside className="hidden md:flex md:w-64 md:flex-col border-r border-border bg-primary">
+      <aside className="hidden md:flex md:w-64 md:flex-col border-r border-border bg-primary print:hidden">
         <div className="flex items-center gap-2 px-6 py-5 border-b border-border">
           <span className="text-xl font-bold tracking-tight text-accent">Admin</span>
           <span className="text-xl font-bold tracking-tight">POS6</span>
@@ -52,7 +52,7 @@ export default function Layout() {
 
       <div className="flex flex-1 flex-col min-w-0">
         {/* Topbar (mobile) */}
-        <header className="flex items-center justify-between border-b border-border bg-primary px-4 py-3 md:hidden">
+        <header className="flex items-center justify-between border-b border-border bg-primary px-4 py-3 md:hidden print:hidden">
           <span className="text-lg font-bold">
             <span className="text-accent">Admin</span> POS6
           </span>
