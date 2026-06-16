@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import AgenciesPage from './pages/AgenciesPage';
 import UsersPage from './pages/UsersPage';
 import ReportsPage from './pages/ReportsPage';
+import ConfigPage from './pages/ConfigPage';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
             <Route path="/agencias" element={<AgenciesPage />} />
             <Route path="/usuarios" element={<UsersPage />} />
             <Route path="/reportes" element={<ReportsPage />} />
+            <Route path="/configuracion" element={<ConfigPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/agencias" replace />} />

@@ -1,4 +1,4 @@
-import type { Agency, AuthResult, Ticket, User } from '../types';
+import type { Agency, AuthResult, GameConfig, Ticket, User } from '../types';
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'https://api.mbsport.lat';
 
@@ -88,6 +88,23 @@ class ApiClient {
 
   getTickets() {
     return this.request<Ticket[]>('GET', '/tickets');
+  }
+
+  getGameConfig() {
+    return this.request<GameConfig>('GET', '/jackpot');
+  }
+
+  updateGameConfig(data: {
+    contributionRate?: number;
+    triggerMinAmount?: number;
+    trifectaBonusRate?: number;
+    x2Enabled?: boolean;
+  }) {
+    return this.request<GameConfig>('POST', '/jackpot/config', data);
+  }
+
+  resetJackpot() {
+    return this.request<{ currentAmount: string }>('POST', '/jackpot/reset');
   }
 }
 

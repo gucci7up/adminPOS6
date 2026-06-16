@@ -1,5 +1,16 @@
 export type Role = 'ADMIN' | 'CASHIER';
 
+export interface GameConfig {
+  currentAmount: string;
+  contributionRate: string;
+  triggerMinAmount: string;
+  totalContributed: string;
+  totalAwarded: string;
+  lastAwardedAt: string | null;
+  trifectaBonusRate: string;
+  x2Enabled: boolean;
+}
+
 export interface Agency {
   id: string;
   name: string;

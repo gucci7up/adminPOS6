@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { to: '/agencias', label: 'Agencias', icon: '🏢' },
   { to: '/usuarios', label: 'Usuarios', icon: '👤' },
   { to: '/reportes', label: 'Reportes', icon: '📊' },
+  { to: '/configuracion', label: 'Configuración', icon: '⚙️' },
 ];
 
 export default function Layout() {
