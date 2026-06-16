@@ -1,14 +1,22 @@
 export type Role = 'ADMIN' | 'CASHIER';
 
 export interface GameConfig {
+  x2Enabled: boolean;
+}
+
+export interface AgencyJackpotPool {
+  id: string;
+  agencyId: string;
   currentAmount: string;
   contributionRate: string;
   triggerMinAmount: string;
+  trifectaBonusRate: string;
   totalContributed: string;
   totalAwarded: string;
   lastAwardedAt: string | null;
-  trifectaBonusRate: string;
-  x2Enabled: boolean;
+  lastAwardedRaceId: string | null;
+  updatedAt: string;
+  agency?: { id: string; name: string; code: string };
 }
 
 export interface Agency {

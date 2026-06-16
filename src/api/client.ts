@@ -1,4 +1,4 @@
-import type { Agency, AuthResult, GameConfig, Ticket, User } from '../types';
+import type { Agency, AgencyJackpotPool, AuthResult, GameConfig, Ticket, User } from '../types';
 
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'https://api.mbsport.lat';
 
@@ -90,21 +90,28 @@ class ApiClient {
     return this.request<Ticket[]>('GET', '/tickets');
   }
 
-  getGameConfig() {
-    return this.request<GameConfig>('GET', '/jackpot');
+  getGlobalConfig() {
+    return this.request<GameConfig>('GET', '/jackpot/global');
   }
 
-  updateGameConfig(data: {
-    contributionRate?: number;
-    triggerMinAmount?: number;
-    trifectaBonusRate?: number;
-    x2Enabled?: boolean;
-  }) {
-    return this.request<GameConfig>('POST', '/jackpot/config', data);
+  updateGlobalConfig(data: { x2Enabled?: boolean }) {
+    return this.request<GameConfig>('POST', '/jackpot/global/config', data);
   }
 
-  resetJackpot() {
-    return this.request<{ currentAmount: string }>('POST', '/jackpot/reset');
+  getAllAgencyPools() {
+    return this.request<AgencyJackpotPool[]>('GET', '/jackpot/agencies');
+  }
+
+  getAgencyPool(agencyId: string) {
+    return this.request<AgencyJackpotPool>('GET', `/jackpot/agencies/${agencyId}`);
+  }
+
+  updateAgencyConfig(agencyId: string, data: { contributionRate?: number; triggerMinAmount?: number; trifectaBonusRate?: number }) {
+    return this.request<AgencyJackpotPool>('POST', `/jackpot/agencies/${agencyId}/config`, data);
+  }
+
+  resetAgencyPool(agencyId: string) {
+    return this.request<{ agencyId: string; currentAmount: string }>('POST', `/jackpot/agencies/${agencyId}/reset`);
   }
 }
 
