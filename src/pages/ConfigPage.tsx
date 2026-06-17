@@ -199,7 +199,7 @@ export default function ConfigPage() {
   async function doResetAgencyPool() {
     if (!selectedId) return;
     const agencyName = selectedPool?.agency?.name ?? 'esta agencia';
-    if (!confirm(`¿Reiniciar el pozo de "${agencyName}" a $0.00?`)) return;
+    if (!confirm(`¿Reiniciar el pozo de "${agencyName}" a RD$ 0.00?`)) return;
     setResettingAgency(true);
     try {
       await apiClient.resetAgencyPool(selectedId);
@@ -215,6 +215,7 @@ export default function ConfigPage() {
   const poolAmount = selectedPool ? parseFloat(selectedPool.currentAmount).toFixed(2) : '0.00';
   const totalContrib = selectedPool ? parseFloat(selectedPool.totalContributed).toFixed(2) : '0.00';
   const totalAwarded = selectedPool ? parseFloat(selectedPool.totalAwarded).toFixed(2) : '0.00';
+  const cur = 'RD$';
   const lastAward = selectedPool?.lastAwardedAt
     ? new Date(selectedPool.lastAwardedAt).toLocaleString('es-DO')
     : 'Nunca';
@@ -266,7 +267,7 @@ export default function ConfigPage() {
                 <div>
                   <p className="text-sm font-semibold text-foreground">Estado del X2</p>
                   <p className="text-xs text-muted">
-                    {x2Enabled ? 'Activo — se asigna en cada carrera' : 'Inactivo — no se asigna X2'}
+                    {x2Enabled ? 'Activo — ~30% de probabilidad por carrera' : 'Inactivo — no se asigna X2'}
                   </p>
                 </div>
                 <Toggle checked={x2Enabled} onChange={setX2Enabled} />
@@ -318,7 +319,7 @@ export default function ConfigPage() {
                         {pool.agency?.name ?? pool.agencyId.slice(0, 8)}
                       </span>
                       <span className="text-xs text-muted">
-                        {pool.agency?.code ?? '—'} · pozo: <span className="text-foreground">${amount}</span>
+                        {pool.agency?.code ?? '—'} · pozo: <span className="text-foreground">RD$ {amount}</span>
                       </span>
                     </button>
                   );
@@ -333,10 +334,10 @@ export default function ConfigPage() {
                   <>
                     {/* Stats */}
                     <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-secondary p-4">
-                      <Stat label="Pozo actual" value={`$${poolAmount}`} accent />
+                      <Stat label="Pozo actual" value={`${cur} ${poolAmount}`} accent />
                       <Stat label="Último premio" value={lastAward} small />
-                      <Stat label="Total contribuido" value={`$${totalContrib}`} />
-                      <Stat label="Total pagado" value={`$${totalAwarded}`} />
+                      <Stat label="Total contribuido" value={`${cur} ${totalContrib}`} />
+                      <Stat label="Total pagado" value={`${cur} ${totalAwarded}`} />
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -348,7 +349,7 @@ export default function ConfigPage() {
                       </Field>
 
                       <Field
-                        label="Mínimo para activar ($)"
+                        label="Mínimo para activar (RD$)"
                         hint="El jackpot no cae hasta superar este monto."
                       >
                         <NumericInput value={trigger} onChange={setTrigger} min={0} step={10} />
