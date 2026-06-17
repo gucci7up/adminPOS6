@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '../api/client';
-import type { AgencyJackpotPool, GameConfig } from '../types';
+import type { AgencyJackpotPool } from '../types';
 
 type Toast = { id: number; text: string; ok: boolean };
 let toastId = 0;
@@ -124,13 +124,15 @@ export default function ConfigPage() {
   const [contribution, setContribution] = useState('');
   const [trigger, setTrigger] = useState('');
   const [bonusRate, setBonusRate] = useState('');
+  const [agencyX2Enabled, setAgencyX2Enabled] = useState(true);
+  const [agencyX2Probability, setAgencyX2Probability] = useState('30');
   const [savingAgency, setSavingAgency] = useState(false);
   const [resettingAgency, setResettingAgency] = useState(false);
 
   const loadGlobal = useCallback(async () => {
     try {
       const data = await apiClient.getGlobalConfig();
-      setX2Enabled((data as GameConfig).x2Enabled);
+      setX2Enabled(data.x2Enabled);
     } catch {
       add('Error cargando configuración global', false);
     } finally {
@@ -163,6 +165,8 @@ export default function ConfigPage() {
     setContribution((parseFloat(selectedPool.contributionRate) * 100).toFixed(2));
     setTrigger(parseFloat(selectedPool.triggerMinAmount).toFixed(2));
     setBonusRate((parseFloat(selectedPool.trifectaBonusRate) * 100).toFixed(0));
+    setAgencyX2Enabled(selectedPool.x2Enabled);
+    setAgencyX2Probability((parseFloat(selectedPool.x2Probability) * 100).toFixed(0));
   }, [selectedId, agencyPools]);
 
   async function saveX2() {
@@ -170,7 +174,7 @@ export default function ConfigPage() {
     try {
       await apiClient.updateGlobalConfig({ x2Enabled });
       await loadGlobal();
-      add(`X2 ${x2Enabled ? 'activado' : 'desactivado'}`, true);
+      add(`X2 global ${x2Enabled ? 'activado' : 'desactivado'}`, true);
     } catch (e: unknown) {
       add(e instanceof Error ? e.message : 'Error al guardar', false);
     } finally {
@@ -182,10 +186,13 @@ export default function ConfigPage() {
     if (!selectedId) return;
     setSavingAgency(true);
     try {
+      const prob = Math.min(100, Math.max(0, parseFloat(agencyX2Probability) || 0)) / 100;
       const updated = await apiClient.updateAgencyConfig(selectedId, {
         contributionRate: parseFloat(contribution) / 100,
         triggerMinAmount: parseFloat(trigger),
         trifectaBonusRate: parseFloat(bonusRate) / 100,
+        x2Enabled: agencyX2Enabled,
+        x2Probability: prob,
       });
       setAgencyPools((prev) => prev.map((p) => (p.agencyId === selectedId ? { ...p, ...updated } : p)));
       add('Configuración guardada', true);
@@ -240,7 +247,7 @@ export default function ConfigPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Configuración del Juego</h1>
         <p className="mt-1 text-sm text-muted">
-          Jackpot y Bonus se configuran por agencia. El X2 es global para todas.
+          Jackpot, Bonus y X2 se configuran de forma independiente por agencia.
         </p>
       </div>
 
@@ -255,8 +262,9 @@ export default function ConfigPage() {
               <div className="rounded-lg border border-border bg-secondary p-4">
                 <p className="text-sm text-muted">
                   Al <span className="text-accent font-semibold">cerrar la venta</span> de cada
-                  carrera, el sistema asigna aleatoriamente un perro (1–6) con cuota doble.
-                  Aplica a apuestas GANAR, EXACTA y TRIFECTA que incluyan ese perro.
+                  carrera, el sistema asigna aleatoriamente un perro (1–6) con cuota doble
+                  de forma <span className="text-accent font-semibold">independiente por agencia</span>.
+                  La probabilidad y el perro X2 se configuran por agencia en la sección de abajo.
                 </p>
                 <p className="mt-2 text-xs text-muted opacity-70">
                   Ejemplo: perro 3 cuota 4.00 → con X2 liquida como 8.00.
@@ -265,9 +273,9 @@ export default function ConfigPage() {
 
               <div className="flex items-center justify-between rounded-lg border border-border bg-secondary px-4 py-3">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Estado del X2</p>
+                  <p className="text-sm font-semibold text-foreground">X2 global (predeterminado)</p>
                   <p className="text-xs text-muted">
-                    {x2Enabled ? 'Activo — ~30% de probabilidad por carrera' : 'Inactivo — no se asigna X2'}
+                    {x2Enabled ? 'Activo — la configuración por agencia tiene prioridad' : 'Inactivo — no se asigna X2 a ninguna agencia'}
                   </p>
                 </div>
                 <Toggle checked={x2Enabled} onChange={setX2Enabled} />
@@ -276,8 +284,8 @@ export default function ConfigPage() {
               <div className="rounded-lg border border-border p-3 text-xs text-muted space-y-1">
                 <p className="font-semibold text-foreground mb-1">Flujo del X2</p>
                 <Step n={1} text="Carrera ABIERTA — jugadores apuestan normalmente" />
-                <Step n={2} text="Venta CERRADA — sistema sortea perro X2 (1 de 6)" />
-                <Step n={3} text="POS muestra badge naranja «X2 Perro N»" />
+                <Step n={2} text="Venta CERRADA — sistema sortea perro X2 por agencia (1 de 6)" />
+                <Step n={3} text="Display muestra badge naranja «X2 Perro N» según su agencia" />
                 <Step n={4} text="Si el perro X2 gana, su cuota se duplica en la liquidación" />
               </div>
 
@@ -360,6 +368,34 @@ export default function ConfigPage() {
                         hint="0 = sin bonus. 20 = 20% extra en trifecta."
                       >
                         <NumericInput value={bonusRate} onChange={setBonusRate} min={0} max={200} step={1} />
+                      </Field>
+                    </div>
+
+                    {/* X2 por agencia */}
+                    <div className="rounded-lg border border-border bg-secondary p-4 flex flex-col gap-3">
+                      <p className="text-sm font-semibold text-foreground">Multiplicador X2</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-foreground">Estado del X2</p>
+                          <p className="text-xs text-muted">
+                            {agencyX2Enabled
+                              ? `Activo — ~${agencyX2Probability}% de probabilidad por carrera`
+                              : 'Inactivo — no se asigna X2 a esta agencia'}
+                          </p>
+                        </div>
+                        <Toggle checked={agencyX2Enabled} onChange={setAgencyX2Enabled} />
+                      </div>
+                      <Field
+                        label="Probabilidad de X2 (%)"
+                        hint="% de carreras donde se activa el X2 en esta agencia. 0 = nunca, 100 = siempre."
+                      >
+                        <NumericInput
+                          value={agencyX2Probability}
+                          onChange={setAgencyX2Probability}
+                          min={0}
+                          max={100}
+                          step={5}
+                        />
                       </Field>
                     </div>
 

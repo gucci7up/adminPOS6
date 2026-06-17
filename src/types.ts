@@ -11,6 +11,8 @@ export interface AgencyJackpotPool {
   contributionRate: string;
   triggerMinAmount: string;
   trifectaBonusRate: string;
+  x2Enabled: boolean;
+  x2Probability: string;
   totalContributed: string;
   totalAwarded: string;
   lastAwardedAt: string | null;

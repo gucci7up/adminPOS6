@@ -106,7 +106,7 @@ class ApiClient {
     return this.request<AgencyJackpotPool>('GET', `/jackpot/agencies/${agencyId}`);
   }
 
-  updateAgencyConfig(agencyId: string, data: { contributionRate?: number; triggerMinAmount?: number; trifectaBonusRate?: number }) {
+  updateAgencyConfig(agencyId: string, data: { contributionRate?: number; triggerMinAmount?: number; trifectaBonusRate?: number; x2Enabled?: boolean; x2Probability?: number }) {
     return this.request<AgencyJackpotPool>('POST', `/jackpot/agencies/${agencyId}/config`, data);
   }
 
