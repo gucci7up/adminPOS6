@@ -196,9 +196,12 @@ export default function LoginPage() {
                   type="text"
                   inputMode="numeric"
                   autoComplete="username"
-                  placeholder="Ingresa tu usuario"
+                  placeholder="000-000-000-000"
                   value={accessNumber}
-                  onChange={(e) => setAccessNumber(e.target.value)}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
+                    setAccessNumber(digits.replace(/(\d{3})(?=\d)/g, '$1-'));
+                  }}
                   maxLength={15}
                   style={{ backgroundColor: '#151915', borderColor: '#252B25' }}
                   className="w-full rounded-xl border py-3.5 pl-11 pr-4 text-sm text-foreground placeholder:text-[#3A4A3A] outline-none transition focus:border-accent focus:ring-1 focus:ring-accent/25"
