@@ -111,18 +111,16 @@ export default function AgenciesPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Agencias</h1>
-        {isAdmin && (
-          <button
-            type="button"
-            onClick={() => setShowForm((v) => !v)}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-primary transition-opacity duration-150 hover:opacity-90 cursor-pointer"
-          >
-            {showForm ? 'Cancelar' : '+ Nueva agencia'}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setShowForm((v) => !v)}
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-primary transition-opacity duration-150 hover:opacity-90 cursor-pointer"
+        >
+          {showForm ? 'Cancelar' : '+ Nueva agencia'}
+        </button>
       </div>
 
-      {isAdmin && showForm && (
+      {showForm && (
         <form
           onSubmit={handleCreate}
           className="mb-6 flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-end"
@@ -281,15 +279,13 @@ export default function AgenciesPage() {
                           >
                             {agency.active ? 'Desactivar' : 'Activar'}
                           </button>
-                          {isAdmin && (
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(agency)}
-                              className="rounded-lg border border-destructive/40 px-3 py-1.5 text-xs text-destructive transition-colors duration-150 hover:bg-destructive/10 cursor-pointer"
-                            >
-                              Eliminar
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(agency)}
+                            className="rounded-lg border border-destructive/40 px-3 py-1.5 text-xs text-destructive transition-colors duration-150 hover:bg-destructive/10 cursor-pointer"
+                          >
+                            Eliminar
+                          </button>
                         </div>
                       </td>
                     </>
