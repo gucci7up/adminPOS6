@@ -150,6 +150,12 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const isOwner = user?.role === 'OWNER';
+
+  const visibleSections = NAV_SECTIONS.map((sec) => ({
+    ...sec,
+    items: isOwner ? sec.items.filter((i) => i.to !== '/configuracion') : sec.items,
+  })).filter((sec) => sec.items.length > 0);
 
   const breadcrumb = BREADCRUMB_MAP[location.pathname];
 
@@ -179,13 +185,13 @@ export default function Layout() {
           <p className="font-black text-foreground text-base leading-tight truncate">{user?.username}</p>
           <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-accent uppercase tracking-wider">
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-            Administrador
+            {isOwner ? 'Dueño de Agencia' : 'Administrador'}
           </span>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-4">
-          {NAV_SECTIONS.map(({ section, items }) => (
+          {visibleSections.map(({ section, items }) => (
             <div key={section}>
               <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted/60">
                 {section}
@@ -265,7 +271,7 @@ export default function Layout() {
               <p className="text-[11px] text-muted">Bienvenido,</p>
               <p className="font-bold text-foreground text-sm">{user?.username}</p>
             </div>
-            {NAV_SECTIONS.map(({ section, items }) => (
+            {visibleSections.map(({ section, items }) => (
               <div key={section}>
                 <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted/60">{section}</p>
                 {items.map((item) => (

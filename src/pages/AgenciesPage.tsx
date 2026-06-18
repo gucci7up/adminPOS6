@@ -1,9 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { apiClient, ApiException } from '../api/client';
-import type { Agency } from '../types';
+import type { Agency, User } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 export default function AgenciesPage() {
+  const { user: authUser } = useAuth();
+  const isAdmin = authUser?.role === 'ADMIN';
+
   const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [owners, setOwners] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,11 +22,17 @@ export default function AgenciesPage() {
   const [editName, setEditName] = useState('');
   const [editCode, setEditCode] = useState('');
 
+  const [pendingOwnerId, setPendingOwnerId] = useState<string | null>(null);
+
   async function refresh() {
     setIsLoading(true);
     try {
-      const data = await apiClient.getAgencies();
-      setAgencies(data);
+      const [agenciesData, usersData] = await Promise.all([
+        apiClient.getAgencies(),
+        isAdmin ? apiClient.getUsers() : Promise.resolve([]),
+      ]);
+      setAgencies(agenciesData);
+      setOwners((usersData as User[]).filter((u) => u.role === 'OWNER'));
       setError(null);
     } catch (err) {
       setError(err instanceof ApiException ? err.message : 'No se pudo conectar con el servidor.');
@@ -30,9 +41,7 @@ export default function AgenciesPage() {
     }
   }
 
-  useEffect(() => {
-    refresh();
-  }, []);
+  useEffect(() => { refresh(); }, []);
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -86,20 +95,34 @@ export default function AgenciesPage() {
     }
   }
 
+  async function handleAssignOwner(agencyId: string, ownerId: string) {
+    setPendingOwnerId(agencyId);
+    try {
+      await apiClient.assignAgencyOwner(agencyId, ownerId || null);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiException ? err.message : 'No se pudo conectar con el servidor.');
+    } finally {
+      setPendingOwnerId(null);
+    }
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Agencias</h1>
-        <button
-          type="button"
-          onClick={() => setShowForm((v) => !v)}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-primary transition-opacity duration-150 hover:opacity-90 cursor-pointer"
-        >
-          {showForm ? 'Cancelar' : '+ Nueva agencia'}
-        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setShowForm((v) => !v)}
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-primary transition-opacity duration-150 hover:opacity-90 cursor-pointer"
+          >
+            {showForm ? 'Cancelar' : '+ Nueva agencia'}
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {isAdmin && showForm && (
         <form
           onSubmit={handleCreate}
           className="mb-6 flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-end"
@@ -152,6 +175,7 @@ export default function AgenciesPage() {
               <th className="px-4 py-3 font-medium">Nombre</th>
               <th className="px-4 py-3 font-medium">Código</th>
               <th className="px-4 py-3 font-medium">Activo</th>
+              {isAdmin && <th className="px-4 py-3 font-medium">Propietario</th>}
               <th className="px-4 py-3 font-medium">Creada</th>
               <th className="px-4 py-3 font-medium">Acciones</th>
             </tr>
@@ -159,13 +183,13 @@ export default function AgenciesPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted">
+                <td colSpan={isAdmin ? 6 : 5} className="px-4 py-6 text-center text-muted">
                   Cargando...
                 </td>
               </tr>
             ) : agencies.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-muted">
+                <td colSpan={isAdmin ? 6 : 5} className="px-4 py-6 text-center text-muted">
                   No hay agencias registradas.
                 </td>
               </tr>
@@ -189,6 +213,7 @@ export default function AgenciesPage() {
                         />
                       </td>
                       <td className="px-4 py-2 text-muted">{agency.active ? 'Sí' : 'No'}</td>
+                      {isAdmin && <td className="px-4 py-2 text-muted">{agency.owner?.username ?? '—'}</td>}
                       <td className="px-4 py-2 text-muted">{new Date(agency.createdAt).toLocaleDateString()}</td>
                       <td className="px-4 py-2">
                         <div className="flex gap-2">
@@ -222,6 +247,23 @@ export default function AgenciesPage() {
                           {agency.active ? 'Activa' : 'Inactiva'}
                         </span>
                       </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3">
+                          <select
+                            value={agency.ownerId ?? ''}
+                            onChange={(e) => handleAssignOwner(agency.id, e.target.value)}
+                            disabled={pendingOwnerId === agency.id}
+                            className="rounded-lg border border-border bg-primary px-2 py-1.5 text-sm text-foreground outline-none focus:border-accent disabled:opacity-60 cursor-pointer"
+                          >
+                            <option value="">Sin dueño</option>
+                            {owners.map((o) => (
+                              <option key={o.id} value={o.id}>
+                                {o.username}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-muted">{new Date(agency.createdAt).toLocaleDateString()}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
@@ -239,13 +281,15 @@ export default function AgenciesPage() {
                           >
                             {agency.active ? 'Desactivar' : 'Activar'}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(agency)}
-                            className="rounded-lg border border-destructive/40 px-3 py-1.5 text-xs text-destructive transition-colors duration-150 hover:bg-destructive/10 cursor-pointer"
-                          >
-                            Eliminar
-                          </button>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(agency)}
+                              className="rounded-lg border border-destructive/40 px-3 py-1.5 text-xs text-destructive transition-colors duration-150 hover:bg-destructive/10 cursor-pointer"
+                            >
+                              Eliminar
+                            </button>
+                          )}
                         </div>
                       </td>
                     </>

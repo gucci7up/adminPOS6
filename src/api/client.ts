@@ -74,7 +74,7 @@ class ApiClient {
     return this.request<User[]>('GET', '/users');
   }
 
-  registerUser(data: { username: string; password: string; email?: string }) {
+  registerUser(data: { username: string; password: string; email?: string; role?: 'CASHIER' | 'OWNER' }) {
     return this.request<{ user: User; accessToken: string }>('POST', '/auth/register', data);
   }
 
@@ -84,6 +84,14 @@ class ApiClient {
 
   makeAdmin(userId: string) {
     return this.request<User>('POST', `/users/${userId}/make-admin`);
+  }
+
+  makeOwner(userId: string) {
+    return this.request<User>('POST', `/users/${userId}/make-owner`);
+  }
+
+  assignAgencyOwner(agencyId: string, ownerId: string | null) {
+    return this.request<Agency>('POST', `/agencies/${agencyId}/assign-owner`, { ownerId });
   }
 
   getTickets() {

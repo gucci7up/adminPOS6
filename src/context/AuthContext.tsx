@@ -34,9 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(username: string, password: string): Promise<string | null> {
     try {
       const result = await apiClient.login(username, password);
-      if (result.user.role !== 'ADMIN') {
+      if (result.user.role !== 'ADMIN' && result.user.role !== 'OWNER') {
         apiClient.setToken(null);
-        return 'Solo administradores pueden acceder a este panel.';
+        return 'Solo administradores o dueños de agencias pueden acceder a este panel.';
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
       setUser(result.user);

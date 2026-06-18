@@ -1,13 +1,23 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { apiClient, ApiException } from '../api/client';
 import type { Agency, User } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 function formatUsername(digits: string): string {
   const groups = [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 9), digits.slice(9, 12)];
   return groups.filter(Boolean).join('-');
 }
 
+const roleBadge: Record<string, string> = {
+  ADMIN: 'bg-accent/15 text-accent',
+  OWNER: 'bg-blue-500/15 text-blue-400',
+  CASHIER: 'bg-muted/15 text-muted',
+};
+
 export default function UsersPage() {
+  const { user: authUser } = useAuth();
+  const isAdmin = authUser?.role === 'ADMIN';
+
   const [users, setUsers] = useState<User[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,6 +27,7 @@ export default function UsersPage() {
   const [accessNumber, setAccessNumber] = useState('');
   const [pin, setPin] = useState('');
   const [email, setEmail] = useState('');
+  const [newRole, setNewRole] = useState<'CASHIER' | 'OWNER'>('CASHIER');
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -36,9 +47,7 @@ export default function UsersPage() {
     }
   }
 
-  useEffect(() => {
-    refresh();
-  }, []);
+  useEffect(() => { refresh(); }, []);
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -59,10 +68,12 @@ export default function UsersPage() {
         username: formatUsername(digits),
         password: pin,
         email: email.trim() || undefined,
+        role: isAdmin ? newRole : 'CASHIER',
       });
       setAccessNumber('');
       setPin('');
       setEmail('');
+      setNewRole('CASHIER');
       setShowForm(false);
       await refresh();
     } catch (err) {
@@ -86,10 +97,23 @@ export default function UsersPage() {
   }
 
   async function handleMakeAdmin(user: User) {
-    if (!window.confirm(`¿Convertir a "${user.username}" en ADMIN? Esta acción no se puede revertir desde aquí.`)) return;
+    if (!window.confirm(`¿Convertir a "${user.username}" en ADMIN?`)) return;
     setPendingId(user.id);
     try {
       await apiClient.makeAdmin(user.id);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiException ? err.message : 'No se pudo conectar con el servidor.');
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  async function handleMakeOwner(user: User) {
+    if (!window.confirm(`¿Convertir a "${user.username}" en DUEÑO (OWNER)?`)) return;
+    setPendingId(user.id);
+    try {
+      await apiClient.makeOwner(user.id);
       await refresh();
     } catch (err) {
       setError(err instanceof ApiException ? err.message : 'No se pudo conectar con el servidor.');
@@ -158,12 +182,28 @@ export default function UsersPage() {
               className="w-full rounded-lg border border-border bg-primary px-3 py-2 text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
           </div>
+          {isAdmin && (
+            <div className="min-w-[120px]">
+              <label className="mb-1 block text-sm font-medium text-muted" htmlFor="newRole">
+                Rol
+              </label>
+              <select
+                id="newRole"
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value as 'CASHIER' | 'OWNER')}
+                className="w-full rounded-lg border border-border bg-primary px-3 py-2 text-foreground outline-none focus:border-accent cursor-pointer"
+              >
+                <option value="CASHIER">Cajero</option>
+                <option value="OWNER">Dueño</option>
+              </select>
+            </div>
+          )}
           <button
             type="submit"
             disabled={isSaving}
             className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-primary transition-opacity duration-150 hover:opacity-90 disabled:opacity-60 cursor-pointer"
           >
-            {isSaving ? 'Creando...' : 'Crear cajero'}
+            {isSaving ? 'Creando...' : `Crear ${newRole === 'OWNER' ? 'dueño' : 'cajero'}`}
           </button>
           {formError && <p className="text-sm text-destructive sm:basis-full">{formError}</p>}
         </form>
@@ -206,11 +246,7 @@ export default function UsersPage() {
                   <td className="px-4 py-3 font-medium tabular-nums">{u.username}</td>
                   <td className="px-4 py-3 text-muted">{u.email ?? '—'}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        u.role === 'ADMIN' ? 'bg-accent/15 text-accent' : 'bg-muted/15 text-muted'
-                      }`}
-                    >
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${roleBadge[u.role] ?? ''}`}>
                       {u.role}
                     </span>
                   </td>
@@ -237,16 +273,28 @@ export default function UsersPage() {
                   </td>
                   <td className="px-4 py-3 text-muted">{new Date(u.createdAt).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
-                    {u.role === 'CASHIER' && (
-                      <button
-                        type="button"
-                        onClick={() => handleMakeAdmin(u)}
-                        disabled={pendingId === u.id}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors duration-150 hover:bg-secondary disabled:opacity-60 cursor-pointer"
-                      >
-                        Hacer admin
-                      </button>
-                    )}
+                    <div className="flex gap-2">
+                      {isAdmin && u.role === 'CASHIER' && (
+                        <button
+                          type="button"
+                          onClick={() => handleMakeOwner(u)}
+                          disabled={pendingId === u.id}
+                          className="rounded-lg border border-blue-500/40 px-3 py-1.5 text-xs text-blue-400 transition-colors duration-150 hover:bg-blue-500/10 disabled:opacity-60 cursor-pointer"
+                        >
+                          Hacer dueño
+                        </button>
+                      )}
+                      {isAdmin && u.role === 'CASHIER' && (
+                        <button
+                          type="button"
+                          onClick={() => handleMakeAdmin(u)}
+                          disabled={pendingId === u.id}
+                          className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors duration-150 hover:bg-secondary disabled:opacity-60 cursor-pointer"
+                        >
+                          Hacer admin
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'CASHIER';
+export type Role = 'ADMIN' | 'OWNER' | 'CASHIER';
 
 export interface GameConfig {
   x2Enabled: boolean;
@@ -26,6 +26,8 @@ export interface Agency {
   name: string;
   code: string;
   active: boolean;
+  ownerId: string | null;
+  owner?: { id: string; username: string; email: string | null } | null;
   createdAt: string;
   updatedAt: string;
 }
