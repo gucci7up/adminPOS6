@@ -103,21 +103,25 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadedAt] = useState(new Date());
 
+  const [errors, setErrors] = useState<string[]>([]);
+
   useEffect(() => {
     async function load() {
       setLoading(true);
-      try {
-        const [ag, tk, pl] = await Promise.all([
-          apiClient.getAgencies(),
-          apiClient.getTickets(),
-          apiClient.getAllAgencyPools(),
-        ]);
-        setAgencies(ag);
-        setTickets(tk);
-        setPools(pl);
-      } finally {
-        setLoading(false);
-      }
+      const [ag, tk, pl] = await Promise.allSettled([
+        apiClient.getAgencies(),
+        apiClient.getTickets(),
+        apiClient.getAllAgencyPools(),
+      ]);
+      const errs: string[] = [];
+      if (ag.status === 'fulfilled') setAgencies(ag.value);
+      else errs.push(`Agencias: ${ag.reason?.message ?? ag.reason}`);
+      if (tk.status === 'fulfilled') setTickets(tk.value);
+      else errs.push(`Tickets: ${tk.reason?.message ?? tk.reason}`);
+      if (pl.status === 'fulfilled') setPools(pl.value);
+      else errs.push(`Jackpot: ${pl.reason?.message ?? pl.reason}`);
+      setErrors(errs);
+      setLoading(false);
     }
     load();
   }, []);
@@ -180,6 +184,14 @@ export default function DashboardPage() {
       </div>
 
       <div className="flex-1 p-4 md:p-8 flex flex-col gap-6">
+
+        {/* ── Errores de carga ───────────────────────────────────────────── */}
+        {errors.length > 0 && (
+          <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive flex flex-col gap-1">
+            <p className="font-bold">Algunos datos no pudieron cargarse:</p>
+            {errors.map((e, i) => <p key={i} className="text-xs opacity-80">{e}</p>)}
+          </div>
+        )}
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div>
