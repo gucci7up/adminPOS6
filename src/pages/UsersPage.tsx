@@ -3,15 +3,21 @@ import { apiClient, ApiException } from '../api/client';
 import type { Agency, User } from '../types';
 import { useAuth } from '../context/AuthContext';
 
-function formatUsername(digits: string): string {
-  const groups = [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6, 9), digits.slice(9, 12)];
-  return groups.filter(Boolean).join('-');
+function generateUsername(): string {
+  const digits = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10)).join('');
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}-${digits.slice(9, 12)}`;
 }
 
 const roleBadge: Record<string, string> = {
   ADMIN: 'bg-accent/15 text-accent',
   OWNER: 'bg-blue-500/15 text-blue-400',
   CASHIER: 'bg-muted/15 text-muted',
+};
+
+const roleLabel: Record<string, string> = {
+  ADMIN: 'Admin',
+  OWNER: 'Dueño',
+  CASHIER: 'Cajero',
 };
 
 export default function UsersPage() {
@@ -23,13 +29,21 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Formulario de nuevo usuario
   const [showForm, setShowForm] = useState(false);
-  const [accessNumber, setAccessNumber] = useState('');
+  const [accessNumber, setAccessNumber] = useState(() => generateUsername());
+  const [userName, setUserName] = useState('');
   const [pin, setPin] = useState('');
   const [email, setEmail] = useState('');
   const [newRole, setNewRole] = useState<'CASHIER' | 'OWNER'>('CASHIER');
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Cambio de contraseña
+  const [editPasswordId, setEditPasswordId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   const [pendingId, setPendingId] = useState<string | null>(null);
 
@@ -60,17 +74,22 @@ export default function UsersPage() {
       setFormError('El PIN debe tener 8 dígitos.');
       return;
     }
-
+    if (newRole === 'OWNER' && !userName.trim()) {
+      setFormError('El nombre es obligatorio para el rol Dueño.');
+      return;
+    }
     setFormError(null);
     setIsSaving(true);
     try {
       await apiClient.registerUser({
-        username: formatUsername(digits),
+        username: `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}-${digits.slice(9, 12)}`,
+        name: userName.trim() || undefined,
         password: pin,
         email: email.trim() || undefined,
         role: isAdmin ? newRole : 'CASHIER',
       });
-      setAccessNumber('');
+      setAccessNumber(generateUsername());
+      setUserName('');
       setPin('');
       setEmail('');
       setNewRole('CASHIER');
@@ -122,40 +141,86 @@ export default function UsersPage() {
     }
   }
 
+  async function handleSavePassword(userId: string) {
+    if (!/^\d{8}$/.test(newPassword)) {
+      setPasswordError('El PIN debe tener exactamente 8 dígitos numéricos.');
+      return;
+    }
+    setPasswordError(null);
+    setIsSavingPassword(true);
+    try {
+      await apiClient.updateUserPassword(userId, newPassword);
+      setEditPasswordId(null);
+      setNewPassword('');
+    } catch (err) {
+      setPasswordError(err instanceof ApiException ? err.message : 'No se pudo conectar con el servidor.');
+    } finally {
+      setIsSavingPassword(false);
+    }
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Usuarios</h1>
         <button
           type="button"
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => { setShowForm((v) => !v); if (!showForm) setAccessNumber(generateUsername()); }}
           className="rounded-lg bg-accent px-4 py-2 text-sm font-bold text-primary transition-opacity duration-150 hover:opacity-90 cursor-pointer"
         >
           {showForm ? 'Cancelar' : '+ Nuevo usuario'}
         </button>
       </div>
 
+      {/* ── Formulario nuevo usuario ──────────────────────────────────────── */}
       {showForm && (
         <form
           onSubmit={handleCreate}
           className="mb-6 flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-end sm:flex-wrap"
         >
-          <div className="flex-1 min-w-[160px]">
+          {/* Número de acceso con botón generar */}
+          <div className="flex-1 min-w-[200px]">
             <label className="mb-1 block text-sm font-medium text-muted" htmlFor="accessNumber">
-              Número de acceso (12 dígitos)
+              Número de acceso
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="accessNumber"
+                required
+                inputMode="numeric"
+                placeholder="000-000-000-002"
+                value={accessNumber}
+                onChange={(e) => setAccessNumber(e.target.value)}
+                maxLength={15}
+                className="w-full rounded-lg border border-border bg-primary px-3 py-2 text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setAccessNumber(generateUsername())}
+                title="Generar número aleatorio"
+                className="flex-shrink-0 rounded-lg border border-border px-3 py-2 text-xs text-muted hover:bg-secondary cursor-pointer"
+              >
+                ↺
+              </button>
+            </div>
+          </div>
+
+          {/* Nombre (obligatorio para OWNER) */}
+          <div className="flex-1 min-w-[160px]">
+            <label className="mb-1 block text-sm font-medium text-muted" htmlFor="userName">
+              Nombre {newRole === 'OWNER' && <span className="text-destructive">*</span>}
             </label>
             <input
-              id="accessNumber"
-              required
-              inputMode="numeric"
-              placeholder="000-000-000-002"
-              value={accessNumber}
-              onChange={(e) => setAccessNumber(e.target.value)}
-              maxLength={15}
+              id="userName"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Nombre completo"
               className="w-full rounded-lg border border-border bg-primary px-3 py-2 text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
           </div>
-          <div className="flex-1 min-w-[120px]">
+
+          {/* PIN */}
+          <div className="min-w-[120px]">
             <label className="mb-1 block text-sm font-medium text-muted" htmlFor="pin">
               PIN (8 dígitos)
             </label>
@@ -170,6 +235,8 @@ export default function UsersPage() {
               className="w-full rounded-lg border border-border bg-primary px-3 py-2 text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
           </div>
+
+          {/* Email opcional */}
           <div className="flex-1 min-w-[160px]">
             <label className="mb-1 block text-sm font-medium text-muted" htmlFor="email">
               Email (opcional)
@@ -182,6 +249,8 @@ export default function UsersPage() {
               className="w-full rounded-lg border border-border bg-primary px-3 py-2 text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
           </div>
+
+          {/* Rol */}
           {isAdmin && (
             <div className="min-w-[120px]">
               <label className="mb-1 block text-sm font-medium text-muted" htmlFor="newRole">
@@ -198,6 +267,7 @@ export default function UsersPage() {
               </select>
             </div>
           )}
+
           <button
             type="submit"
             disabled={isSaving}
@@ -215,12 +285,13 @@ export default function UsersPage() {
         </p>
       )}
 
+      {/* ── Tabla de usuarios ─────────────────────────────────────────────── */}
       <div className="overflow-x-auto rounded-xl border border-border bg-surface">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border text-muted">
               <th className="px-4 py-3 font-medium">Usuario</th>
-              <th className="px-4 py-3 font-medium">Email</th>
+              <th className="px-4 py-3 font-medium">Nombre</th>
               <th className="px-4 py-3 font-medium">Rol</th>
               <th className="px-4 py-3 font-medium">Agencia</th>
               <th className="px-4 py-3 font-medium">Creado</th>
@@ -230,73 +301,112 @@ export default function UsersPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-muted">
-                  Cargando...
-                </td>
+                <td colSpan={6} className="px-4 py-6 text-center text-muted">Cargando...</td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-muted">
-                  No hay usuarios registrados.
-                </td>
+                <td colSpan={6} className="px-4 py-6 text-center text-muted">No hay usuarios registrados.</td>
               </tr>
             ) : (
               users.map((u) => (
-                <tr key={u.id} className="border-b border-border last:border-0 hover:bg-secondary/50">
-                  <td className="px-4 py-3 font-medium tabular-nums">{u.username}</td>
-                  <td className="px-4 py-3 text-muted">{u.email ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${roleBadge[u.role] ?? ''}`}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {u.role === 'CASHIER' ? (
-                      <select
-                        value={u.agencyId ?? ''}
-                        onChange={(e) => handleAssignAgency(u.id, e.target.value)}
-                        disabled={pendingId === u.id}
-                        className="rounded-lg border border-border bg-primary px-2 py-1.5 text-sm text-foreground outline-none focus:border-accent disabled:opacity-60 cursor-pointer"
-                      >
-                        <option value="" disabled>
-                          Sin agencia
-                        </option>
-                        {agencies.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted">{new Date(u.createdAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      {isAdmin && u.role === 'CASHIER' && (
-                        <button
-                          type="button"
-                          onClick={() => handleMakeOwner(u)}
+                <>
+                  <tr key={u.id} className="border-b border-border last:border-0 hover:bg-secondary/50">
+                    <td className="px-4 py-3 font-mono text-sm tabular-nums">{u.username}</td>
+                    <td className="px-4 py-3 text-foreground">{u.name ?? <span className="text-muted">—</span>}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${roleBadge[u.role] ?? ''}`}>
+                        {roleLabel[u.role] ?? u.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.role === 'CASHIER' ? (
+                        <select
+                          value={u.agencyId ?? ''}
+                          onChange={(e) => handleAssignAgency(u.id, e.target.value)}
                           disabled={pendingId === u.id}
-                          className="rounded-lg border border-blue-500/40 px-3 py-1.5 text-xs text-blue-400 transition-colors duration-150 hover:bg-blue-500/10 disabled:opacity-60 cursor-pointer"
+                          className="rounded-lg border border-border bg-primary px-2 py-1.5 text-sm text-foreground outline-none focus:border-accent disabled:opacity-60 cursor-pointer"
                         >
-                          Hacer dueño
-                        </button>
+                          <option value="" disabled>Sin agencia</option>
+                          {agencies.map((a) => (
+                            <option key={a.id} value={a.id}>{a.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-muted">{u.agency?.name ?? '—'}</span>
                       )}
-                      {isAdmin && u.role === 'CASHIER' && (
-                        <button
-                          type="button"
-                          onClick={() => handleMakeAdmin(u)}
-                          disabled={pendingId === u.id}
-                          className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors duration-150 hover:bg-secondary disabled:opacity-60 cursor-pointer"
-                        >
-                          Hacer admin
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-4 py-3 text-muted">{new Date(u.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2 flex-wrap">
+                        {/* Cambiar contraseña — solo ADMIN */}
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditPasswordId(editPasswordId === u.id ? null : u.id);
+                              setNewPassword('');
+                              setPasswordError(null);
+                            }}
+                            className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors duration-150 hover:bg-secondary cursor-pointer"
+                          >
+                            {editPasswordId === u.id ? 'Cancelar' : 'Cambiar PIN'}
+                          </button>
+                        )}
+                        {isAdmin && u.role === 'CASHIER' && (
+                          <button
+                            type="button"
+                            onClick={() => handleMakeOwner(u)}
+                            disabled={pendingId === u.id}
+                            className="rounded-lg border border-blue-500/40 px-3 py-1.5 text-xs text-blue-400 transition-colors duration-150 hover:bg-blue-500/10 disabled:opacity-60 cursor-pointer"
+                          >
+                            Hacer dueño
+                          </button>
+                        )}
+                        {isAdmin && u.role === 'CASHIER' && (
+                          <button
+                            type="button"
+                            onClick={() => handleMakeAdmin(u)}
+                            disabled={pendingId === u.id}
+                            className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors duration-150 hover:bg-secondary disabled:opacity-60 cursor-pointer"
+                          >
+                            Hacer admin
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Fila inline de cambio de contraseña */}
+                  {editPasswordId === u.id && (
+                    <tr key={`${u.id}-pwd`} className="border-b border-border bg-secondary/30">
+                      <td colSpan={6} className="px-4 py-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-xs text-muted font-medium">Nuevo PIN para {u.username}:</span>
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            placeholder="8 dígitos"
+                            maxLength={8}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="rounded-lg border border-border bg-primary px-3 py-1.5 text-sm text-foreground outline-none focus:border-accent w-36"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSavePassword(u.id)}
+                            disabled={isSavingPassword}
+                            className="rounded-lg bg-accent px-4 py-1.5 text-xs font-bold text-primary hover:opacity-90 disabled:opacity-60 cursor-pointer"
+                          >
+                            {isSavingPassword ? 'Guardando...' : 'Guardar'}
+                          </button>
+                          {passwordError && (
+                            <span className="text-xs text-destructive">{passwordError}</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))
             )}
           </tbody>

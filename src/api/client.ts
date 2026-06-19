@@ -74,8 +74,12 @@ class ApiClient {
     return this.request<User[]>('GET', '/users');
   }
 
-  registerUser(data: { username: string; password: string; email?: string; role?: 'CASHIER' | 'OWNER' }) {
+  registerUser(data: { username: string; name?: string; password: string; email?: string; role?: 'CASHIER' | 'OWNER' }) {
     return this.request<{ user: User; accessToken: string }>('POST', '/auth/register', data);
+  }
+
+  updateUserPassword(userId: string, password: string) {
+    return this.request<{ ok: boolean }>('PATCH', `/users/${userId}/password`, { password });
   }
 
   assignUserAgency(userId: string, agencyId: string) {

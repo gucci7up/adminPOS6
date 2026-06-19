@@ -35,6 +35,7 @@ export interface Agency {
 export interface User {
   id: string;
   username: string;
+  name: string | null;
   email: string | null;
   role: Role;
   agencyId: string | null;
