@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import React, { useEffect, useState, type FormEvent } from 'react';
 import { apiClient, ApiException } from '../api/client';
 import type { Agency, User } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -38,6 +38,13 @@ export default function UsersPage() {
   const [newRole, setNewRole] = useState<'CASHIER' | 'OWNER'>('CASHIER');
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Edición de perfil (nombre / email)
+  const [editProfileId, setEditProfileId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Cambio de contraseña
   const [editPasswordId, setEditPasswordId] = useState<string | null>(null);
@@ -138,6 +145,32 @@ export default function UsersPage() {
       setError(err instanceof ApiException ? err.message : 'No se pudo conectar con el servidor.');
     } finally {
       setPendingId(null);
+    }
+  }
+
+  function openEditProfile(u: User) {
+    setEditProfileId(u.id);
+    setEditName(u.name ?? '');
+    setEditEmail(u.email ?? '');
+    setProfileError(null);
+    // cerrar cambio de pin si estaba abierto
+    setEditPasswordId(null);
+  }
+
+  async function handleSaveProfile(userId: string) {
+    setIsSavingProfile(true);
+    setProfileError(null);
+    try {
+      await apiClient.updateUserProfile(userId, {
+        name: editName.trim() || undefined,
+        email: editEmail.trim() || undefined,
+      });
+      setEditProfileId(null);
+      await refresh();
+    } catch (err) {
+      setProfileError(err instanceof ApiException ? err.message : 'No se pudo guardar.');
+    } finally {
+      setIsSavingProfile(false);
     }
   }
 
@@ -309,8 +342,8 @@ export default function UsersPage() {
               </tr>
             ) : (
               users.map((u) => (
-                <>
-                  <tr key={u.id} className="border-b border-border last:border-0 hover:bg-secondary/50">
+                <React.Fragment key={u.id}>
+                  <tr className="border-b border-border last:border-0 hover:bg-secondary/50">
                     <td className="px-4 py-3 font-mono text-sm tabular-nums">{u.username}</td>
                     <td className="px-4 py-3 text-foreground">{u.name ?? <span className="text-muted">—</span>}</td>
                     <td className="px-4 py-3">
@@ -338,6 +371,22 @@ export default function UsersPage() {
                     <td className="px-4 py-3 text-muted">{new Date(u.createdAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2 flex-wrap">
+                        {/* Editar nombre/email — solo ADMIN */}
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (editProfileId === u.id) {
+                                setEditProfileId(null);
+                              } else {
+                                openEditProfile(u);
+                              }
+                            }}
+                            className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors duration-150 hover:bg-accent/10 cursor-pointer"
+                          >
+                            {editProfileId === u.id ? 'Cancelar' : 'Editar'}
+                          </button>
+                        )}
                         {/* Cambiar contraseña — solo ADMIN */}
                         {isAdmin && (
                           <button
@@ -346,6 +395,7 @@ export default function UsersPage() {
                               setEditPasswordId(editPasswordId === u.id ? null : u.id);
                               setNewPassword('');
                               setPasswordError(null);
+                              setEditProfileId(null);
                             }}
                             className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors duration-150 hover:bg-secondary cursor-pointer"
                           >
@@ -375,6 +425,48 @@ export default function UsersPage() {
                       </div>
                     </td>
                   </tr>
+
+                  {/* Fila inline de edición de perfil */}
+                  {editProfileId === u.id && (
+                    <tr key={`${u.id}-profile`} className="border-b border-border bg-accent/5">
+                      <td colSpan={6} className="px-4 py-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-xs text-muted font-medium">Editar {u.username}:</span>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs text-muted">Nombre</label>
+                            <input
+                              type="text"
+                              placeholder="Nombre completo"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="rounded-lg border border-border bg-primary px-3 py-1.5 text-sm text-foreground outline-none focus:border-accent w-48"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs text-muted">Email</label>
+                            <input
+                              type="email"
+                              placeholder="email@ejemplo.com"
+                              value={editEmail}
+                              onChange={(e) => setEditEmail(e.target.value)}
+                              className="rounded-lg border border-border bg-primary px-3 py-1.5 text-sm text-foreground outline-none focus:border-accent w-52"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveProfile(u.id)}
+                            disabled={isSavingProfile}
+                            className="rounded-lg bg-accent px-4 py-1.5 text-xs font-bold text-primary hover:opacity-90 disabled:opacity-60 cursor-pointer self-end"
+                          >
+                            {isSavingProfile ? 'Guardando...' : 'Guardar'}
+                          </button>
+                          {profileError && (
+                            <span className="text-xs text-destructive">{profileError}</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
 
                   {/* Fila inline de cambio de contraseña */}
                   {editPasswordId === u.id && (
@@ -406,7 +498,7 @@ export default function UsersPage() {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               ))
             )}
           </tbody>

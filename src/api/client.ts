@@ -78,6 +78,10 @@ class ApiClient {
     return this.request<{ user: User; accessToken: string }>('POST', '/auth/register', data);
   }
 
+  updateUserProfile(userId: string, data: { name?: string; email?: string }) {
+    return this.request<User>('PATCH', `/users/${userId}`, data);
+  }
+
   updateUserPassword(userId: string, password: string) {
     return this.request<{ ok: boolean }>('PATCH', `/users/${userId}/password`, { password });
   }
