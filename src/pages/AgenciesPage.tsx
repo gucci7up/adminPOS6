@@ -172,6 +172,7 @@ export default function AgenciesPage() {
             <tr className="border-b border-border text-muted">
               <th className="px-4 py-3 font-medium">Nombre</th>
               <th className="px-4 py-3 font-medium">Código</th>
+              <th className="px-4 py-3 font-medium">ID</th>
               <th className="px-4 py-3 font-medium">Activo</th>
               {isAdmin && <th className="px-4 py-3 font-medium">Propietario</th>}
               <th className="px-4 py-3 font-medium">Creada</th>
@@ -181,13 +182,13 @@ export default function AgenciesPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={isAdmin ? 6 : 5} className="px-4 py-6 text-center text-muted">
+                <td colSpan={isAdmin ? 7 : 6} className="px-4 py-6 text-center text-muted">
                   Cargando...
                 </td>
               </tr>
             ) : agencies.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 6 : 5} className="px-4 py-6 text-center text-muted">
+                <td colSpan={isAdmin ? 7 : 6} className="px-4 py-6 text-center text-muted">
                   No hay agencias registradas.
                 </td>
               </tr>
@@ -210,6 +211,7 @@ export default function AgenciesPage() {
                           className="w-full rounded-lg border border-border bg-primary px-2 py-1.5 text-foreground outline-none focus:border-accent"
                         />
                       </td>
+                      <td className="px-4 py-2 text-muted font-mono text-xs">{agency.id}</td>
                       <td className="px-4 py-2 text-muted">{agency.active ? 'Sí' : 'No'}</td>
                       {isAdmin && <td className="px-4 py-2 text-muted">{agency.owner?.username ?? '—'}</td>}
                       <td className="px-4 py-2 text-muted">{new Date(agency.createdAt).toLocaleDateString()}</td>
@@ -236,6 +238,23 @@ export default function AgenciesPage() {
                     <>
                       <td className="px-4 py-3 font-medium">{agency.name}</td>
                       <td className="px-4 py-3 tabular-nums text-muted">{agency.code}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-xs text-muted truncate max-w-[140px]" title={agency.id}>
+                            {agency.id}
+                          </span>
+                          <button
+                            type="button"
+                            title="Copiar ID"
+                            onClick={() => navigator.clipboard.writeText(agency.id)}
+                            className="flex-shrink-0 rounded p-1 text-muted hover:text-accent hover:bg-accent/10 cursor-pointer transition-colors"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs font-medium ${
