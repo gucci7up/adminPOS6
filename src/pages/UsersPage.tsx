@@ -148,6 +148,19 @@ export default function UsersPage() {
     }
   }
 
+  async function handleDeleteUser(user: User) {
+    if (!window.confirm(`¿Eliminar el usuario "${user.username}"?\nEsta acción no se puede deshacer.`)) return;
+    setPendingId(user.id);
+    try {
+      await apiClient.deleteUser(user.id);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiException ? err.message : 'No se pudo eliminar el usuario.');
+    } finally {
+      setPendingId(null);
+    }
+  }
+
   function openEditProfile(u: User) {
     setEditProfileId(u.id);
     setEditName(u.name ?? '');
@@ -420,6 +433,16 @@ export default function UsersPage() {
                             className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors duration-150 hover:bg-secondary disabled:opacity-60 cursor-pointer"
                           >
                             Hacer admin
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(u)}
+                            disabled={pendingId === u.id}
+                            className="rounded-lg border border-destructive/40 px-3 py-1.5 text-xs text-destructive transition-colors duration-150 hover:bg-destructive/10 disabled:opacity-60 cursor-pointer"
+                          >
+                            Eliminar
                           </button>
                         )}
                       </div>

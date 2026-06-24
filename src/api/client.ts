@@ -86,6 +86,10 @@ class ApiClient {
     return this.request<{ ok: boolean }>('PATCH', `/users/${userId}/password`, { password });
   }
 
+  deleteUser(userId: string) {
+    return this.request<{ ok: boolean }>('DELETE', `/users/${userId}`);
+  }
+
   assignUserAgency(userId: string, agencyId: string) {
     return this.request<User>('PATCH', `/users/${userId}/agency`, { agencyId });
   }
