@@ -110,6 +110,14 @@ class ApiClient {
     return this.request<Ticket[]>('GET', '/tickets');
   }
 
+  getCancelledToday() {
+    return this.request<{ count: number; totalAmount: number; tickets: any[] }>('GET', '/tickets/cancelled/today');
+  }
+
+  cancelTicket(ticketId: string) {
+    return this.request<{ ok: boolean }>('POST', `/tickets/${ticketId}/cancel`, { reason: 'Anulado por administrador' });
+  }
+
   getGlobalConfig() {
     return this.request<GameConfig>('GET', '/jackpot/global');
   }

@@ -48,14 +48,21 @@ export default function ReportsPage() {
   const [to, setTo] = useState<string>('');
   const [groupBy, setGroupBy] = useState<GroupBy>('day');
   const [expandedTicketId, setExpandedTicketId] = useState<string | null>(null);
+  const [cancelledToday, setCancelledToday] = useState<{ count: number; totalAmount: number } | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       setIsLoading(true);
       try {
-        const [agenciesData, ticketsData] = await Promise.all([apiClient.getAgencies(), apiClient.getTickets()]);
+        const [agenciesData, ticketsData, cancelledData] = await Promise.all([
+          apiClient.getAgencies(),
+          apiClient.getTickets(),
+          apiClient.getCancelledToday().catch(() => null),
+        ]);
         setAgencies(agenciesData);
         setTickets(ticketsData);
+        if (cancelledData) setCancelledToday({ count: cancelledData.count, totalAmount: cancelledData.totalAmount });
         setError(null);
       } catch (err) {
         setError(err instanceof ApiException ? err.message : 'No se pudo conectar con el servidor.');
@@ -65,6 +72,21 @@ export default function ReportsPage() {
     }
     load();
   }, []);
+
+  async function handleCancelTicket(ticketId: string, ticketNumber: number) {
+    if (!window.confirm(`¿Anular el ticket #${ticketNumber}? Esta acción no se puede deshacer.`)) return;
+    setCancellingId(ticketId);
+    try {
+      await apiClient.cancelTicket(ticketId);
+      const [ticketsData, cancelledData] = await Promise.all([apiClient.getTickets(), apiClient.getCancelledToday().catch(() => null)]);
+      setTickets(ticketsData);
+      if (cancelledData) setCancelledToday({ count: cancelledData.count, totalAmount: cancelledData.totalAmount });
+    } catch (err) {
+      alert(err instanceof ApiException ? err.message : 'No se pudo anular el ticket.');
+    } finally {
+      setCancellingId(null);
+    }
+  }
 
   const filteredTickets = useMemo(() => {
     const fromDate = from ? new Date(`${from}T00:00:00`) : null;
@@ -231,7 +253,7 @@ export default function ReportsPage() {
       </div>
 
       {/* KPIs */}
-      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <KpiCard label="Total apostado" value={currencyFormatter.format(grandTotal.totalApostado)} />
         <KpiCard label="Total pagado" value={currencyFormatter.format(grandTotal.totalPagado)} />
         <KpiCard
@@ -241,6 +263,11 @@ export default function ReportsPage() {
         />
         <KpiCard label="Tickets vendidos" value={grandTotal.ticketCount.toString()} />
         <KpiCard label="Jugadas" value={grandTotal.jugadas.toString()} />
+        <KpiCard
+          label="Anulados hoy"
+          value={cancelledToday ? `${cancelledToday.count} (${currencyFormatter.format(cancelledToday.totalAmount)})` : '—'}
+          tone="destructive"
+        />
       </div>
 
       {/* Agency summary */}
@@ -360,18 +387,19 @@ export default function ReportsPage() {
               <th className="px-4 py-3 font-medium text-right">Apostado</th>
               <th className="px-4 py-3 font-medium text-right">Premio</th>
               <th className="px-4 py-3 font-medium">Estado</th>
+              <th className="px-4 py-3 font-medium">Acción</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={9} className="px-4 py-6 text-center text-muted">
+                <td colSpan={10} className="px-4 py-6 text-center text-muted">
                   Cargando...
                 </td>
               </tr>
             ) : sortedTickets.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-6 text-center text-muted">
+                <td colSpan={10} className="px-4 py-6 text-center text-muted">
                   No hay tickets registrados para los filtros seleccionados.
                 </td>
               </tr>
@@ -398,10 +426,22 @@ export default function ReportsPage() {
                       <td className="px-4 py-3">
                         <StatusBadge status={ticket.status} />
                       </td>
+                      <td className="px-4 py-3">
+                        {ticket.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            disabled={cancellingId === ticket.id}
+                            onClick={(e) => { e.stopPropagation(); handleCancelTicket(ticket.id, ticket.ticketNumber); }}
+                            className="rounded-lg border border-destructive/40 px-3 py-1 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-50 cursor-pointer"
+                          >
+                            {cancellingId === ticket.id ? 'Anulando...' : 'Anular'}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                     {isExpanded && (
                       <tr className="border-b border-border bg-background/40 last:border-0">
-                        <td colSpan={9} className="px-4 py-3">
+                        <td colSpan={10} className="px-4 py-3">
                           <table className="w-full text-left text-xs">
                             <thead>
                               <tr className="text-muted">
